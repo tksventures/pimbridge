@@ -1,0 +1,1 @@
+# Pimbridge - Pimcore adapter
