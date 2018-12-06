@@ -7,12 +7,14 @@ let pimcore;
 let response;
 
 
-function returnData(rType, data) {
-  return ({
+function returnData(config, data) {
+  const rType = config.method.toUpperCase();
+  return ([200, {
     data,
+    request: config,
     success: true,
     msg: `${rType} request was made`,
-  });
+  }]);
 }
 
 describe('Pimbridge', () => {
@@ -25,10 +27,7 @@ describe('Pimbridge', () => {
     pimcore = Pimbridge();
     mock = new MockAdapter(axios);
 
-    mock.onGet('/test').reply(200, returnData('GET'));
-    mock.onPost('/test').reply(200, returnData('POST'));
-    mock.onPut('/test').reply(200, returnData('PUT'));
-    mock.onDelete('/test').reply(200, returnData('DELETE'));
+    mock.onAny().reply(config => returnData(config));
   });
 
   describe('pimURL', () => {
@@ -73,6 +72,18 @@ describe('Pimbridge', () => {
 
       response = await pimcore.connect('delete', '/test');
       expect(response.msg).toBe('DELETE request was made');
+    });
+  });
+
+  describe('getUser', () => {
+    it('should make request to proper Pimcore api endpoint', async () => {
+      response = await pimcore.getUser();
+      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/user?apikey=fakekey');
+    });
+
+    it('should use given api key if provided when making request', async () => {
+      response = await pimcore.getUser('alternativeKey');
+      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/user?apikey=alternativeKey');
     });
   });
 });

@@ -51,8 +51,8 @@ function Pimbridge(pimcoreAccess = {}) {
   // =======================================================
 
   // Retrieves info of user with given apiKey
-  function getUser(apiKey) {
-    return connect('get', pimURL('user', apiKey));
+  function getUser(apikey) {
+    return connect('get', pimURL('user', { apikey }));
   }
 
   // Retrieves server information
