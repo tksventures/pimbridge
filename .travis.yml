@@ -1,0 +1,10 @@
+sudo: required
+language: node_js
+node_js:
+  - "9"
+before_install:
+  - npm i -g npm@6.1.0
+install:
+  - npm install
+script:
+  - npm test
