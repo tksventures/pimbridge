@@ -95,7 +95,7 @@ function Pimbridge(pimcoreAccess = {}) {
   // Requires the following parameters: parentId, key (name) and type
   async function update(resource, params) {
     if (!params.id) {
-      return { error: 'No id provided' };
+      return 'No id provided';
     }
 
     // All infor of object needs to be provided in update,
@@ -105,7 +105,7 @@ function Pimbridge(pimcoreAccess = {}) {
 
     // There's nothing to do if id is the only param
     if (updates.length === 1) {
-      return true;
+      return 'Nothing to update';
     }
 
     // We replace all the old values with new ones
@@ -116,7 +116,7 @@ function Pimbridge(pimcoreAccess = {}) {
     response = await connect('put', pimURL('object'), resourceObject);
 
     if (response.success) {
-      return true;
+      return response;
     }
 
     return response.msg;
