@@ -8,7 +8,7 @@ let response;
 
 let callCounter = 0;
 
-function returnData(config, data) {
+function returnData(config, data = { id: 'something', type: 'folder' }) {
   const rType = config.method.toUpperCase();
   callCounter += 1;
 
@@ -141,25 +141,25 @@ describe('Pimbridge', () => {
     });
 
     it('should include inheritance in url if resource is object and it is included in the parameters', async () => {
-      response = await pimcore.get('image', 1456, { inheritance: 1 });
-      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/image/id/1456?apikey=fakekey');
+      response = await pimcore.get('asset', 1456, { inheritance: 1 });
+      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/asset/id/1456?apikey=fakekey');
 
       response = await pimcore.get('object', 1456, { inheritance: 1 });
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object/id/1456?apikey=fakekey&inheritance=1');
     });
 
-    it('should include light in url if resource is image and it is included in the parameters', async () => {
+    it('should include light in url if resource is asset and it is included in the parameters', async () => {
       response = await pimcore.get('object', 1456, { light: 1 });
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object/id/1456?apikey=fakekey');
 
-      response = await pimcore.get('image', 1456, { light: 1 });
-      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/image/id/1456?apikey=fakekey&light=1');
+      response = await pimcore.get('asset', 1456, { light: 1 });
+      expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/asset/id/1456?apikey=fakekey&light=1');
     });
 
     it('should return callback function response if provided as parameter', async () => {
-      response = await pimcore.get('image', 1456, { light: 1 }, callbackFunction);
+      response = await pimcore.get('asset', 1456, { light: 1 }, callbackFunction);
       expect(response.callbackMade).toBe(true);
-      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/image/id/1456?apikey=fakekey&light=1');
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/asset/id/1456?apikey=fakekey&light=1');
     });
   });
 

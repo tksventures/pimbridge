@@ -19,7 +19,7 @@ function Pimbridge(pimcoreAccess = {}) {
 
   function pimURL(action, data = { apikey: pimcoreAccess.apikey || process.env.PIMCORE_API_KEY }) {
     const pimcoreServer = pimcoreAccess.url || process.env.PIMCORE_URL;
-    const pimcoreKey = data.apikey || process.env.PIMCORE_API_KEY;
+    const pimcoreKey = data.apikey || pimcoreAccess.apikey || process.env.PIMCORE_API_KEY;
 
     return `${pimcoreServer}/webservice/rest/${action}?apikey=${pimcoreKey}${data.extensions || ''}`;
   }
@@ -78,7 +78,7 @@ function Pimbridge(pimcoreAccess = {}) {
       }
     }
 
-    if (resource === 'image' && params.light) {
+    if (resource === 'asset' && params.light) {
       extensions = `&light=${params.light}`;
     }
 
@@ -103,7 +103,7 @@ function Pimbridge(pimcoreAccess = {}) {
 
     // All infor of object needs to be provided in update,
     // so we'll retrieve all customer data prior to applying changes
-    const resourceObject = await get(resource, params.id);
+    const resourceObject = (await get(resource, params.id)).data;
     const updates = Object.keys(params);
 
     // There's nothing to do if id is the only param
@@ -136,7 +136,6 @@ function Pimbridge(pimcoreAccess = {}) {
 
   // Searches resources that match a given criteria
   // Default limit of 100
-
   function search(resource, params = { limit: 100 }, type = 'list', callback) {
     let resourceName;
     if (singularize[resource]) {
@@ -162,10 +161,12 @@ function Pimbridge(pimcoreAccess = {}) {
     }), {}, callback);
   }
 
+  // Counts records of given resource
   function count(resource, params = null, callback) {
     return search(resource, params, 'count', callback);
   }
 
+  // Returns server time
   function serverTime(callback) {
     return connect('get', pimURL('system-clock'), {}, callback);
   }
