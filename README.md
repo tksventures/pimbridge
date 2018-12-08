@@ -13,19 +13,24 @@ npm install pimbridge
 This will install the package
 
 ```
-Pimbridge = require('pimbridge);
+Pimbridge = require('pimbridge');
 
-pimcore = Pimbridge({ url: 'http://pimcore_server', apikey: 'apikey' });
+pimcore = Pimbridge({
+    url: 'http://pimcore_server',
+    apikey: 'apikey',
+});
 ```
-This will let you use our package's methods through the pimcore object. The url and apikey can be provided via the PIMCORE_URL and PIMCORE_API_KEY environment variables without the need to enter them as parameters.
+This will let you use our package's methods through the pimcore object.
+
+Alternatively, the url and apikey can be provided via the PIMCORE_URL and PIMCORE_API_KEY environment variables without the need to enter them as parameters.
 
 ### Running the tests
+When developing extensions to the package, run the following command locally.
 
 ```
 npm test
 ```
 
-### Examples
 ## Basic functions
 - All api methods return promises so you will need to handle them as such in your code.
 - If an error occurs, and object will be returned with an error param of true and a fullError param showing the full response from pimcore.
@@ -33,13 +38,16 @@ npm test
 
 The following aware the most prominent methods from the library:
 
+### getUser
 ```
-pimcoreUser = await pimcore.getUser() or pimcoreUser = await pimcore.getUser('someapikey');
+pimcoreUser = await pimcore.getUser()
+// or
+pimcoreUser = await pimcore.getUser('someapikey');
 ```
 This returns the information of the pimcore user based on the api provided. By default, it will return the key provided in the environment or the creation of pimcore object, but api keys can be provided.
 
 
-
+### get
 ```
 document await pimcore.get('document', 3);
 
@@ -49,7 +57,7 @@ object = await pimcore.get('object', 1281, { inheritance: 0 });
 ```
 The get() method retrieves resources from one of the three main pimcore folders: documents, assets, and objects. Basic params format follows (resouce, id of resource, parameters).
 
-
+### create
 ```
 response = await pimcore.create('object', {
   parentId: 1,
@@ -61,6 +69,7 @@ response = await pimcore.create('object', {
 ```
 Basic creation action. The above created a folder in the objects section with a name of 'pimcore-folder'.
 
+### update
 ```
 response = await pimcore.update('object', {
   id: 12345,
@@ -71,6 +80,7 @@ response = await pimcore.update('object', {
 ```
 Basic update action. The above change the name of a folder we created before to 'pimcore-other-folder'
 
+### remove
 ```
 object = await pimcore.remove('object', 12479);
 
@@ -78,6 +88,7 @@ object = await pimcore.remove('object', 12479);
 ```
 Basic delete action. The above will delete the folder we created and updated before
 
+### search
 
 ```
 objects = pimcore.search('objects', {
