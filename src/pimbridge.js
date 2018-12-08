@@ -1,7 +1,5 @@
 const axios = require('axios');
 
-let response;
-
 function Pimbridge(pimcoreAccess = {}) {
   // Pimcore server and apiKey can be set by env variables or as parameters
   // Generates the url pimcore needs to find resource
@@ -27,7 +25,7 @@ function Pimbridge(pimcoreAccess = {}) {
   }
 
   // We use axios to make the connection to pimcore server
-  function connect(method, url, data) {
+  function connect(method, url, data, callback) {
     return axios({
       url,
       method,
@@ -35,6 +33,10 @@ function Pimbridge(pimcoreAccess = {}) {
     })
       .then((res) => {
         if (res.data.success) {
+          // If callback exists, it is executed with axios response as a param
+          if (callback) {
+            return callback(res.data);
+          }
           return res.data;
         }
         return ({ error: true, message: res.data.msg });
@@ -51,19 +53,20 @@ function Pimbridge(pimcoreAccess = {}) {
   // =======================================================
 
   // Retrieves info of user with given apiKey
-  function getUser(apikey) {
-    return connect('get', pimURL('user', { apikey }));
+  function getUser(apikey, callback) {
+    return connect('get', pimURL('user', { apikey }), {}, callback);
   }
 
   // Retrieves server information
-  function serverInfo() {
-    return connect('get', pimURL('server-info'));
+  function serverInfo(callback) {
+    return connect('get', pimURL('server-info'), {}, callback);
   }
 
   // Retrieves a resource based on name and id
-  function get(resource, id, params = {}) {
+  function get(resource, id, params = {}, callback) {
+    // If no id is provided, then it gets for the resource directly
     if (!id) {
-      return connect('get', pimURL(`${resource}`));
+      return connect('get', pimURL(`${resource}`), {}, callback);
     }
     let extensions = '';
 
@@ -81,19 +84,19 @@ function Pimbridge(pimcoreAccess = {}) {
 
     return connect('get', pimURL(`${resource}/id/${id}`, {
       extensions,
-    }));
+    }), {}, callback);
   }
 
   // Creates a resource based on name of it and parameters provided
   // Requires the following parameters: parentId, key (name) and type
-  function create(resource, params) {
-    return connect('post', pimURL(resource), params);
+  function create(resource, params, callback) {
+    return connect('post', pimURL(resource), params, callback);
   }
 
   // Updates a resource based on parameters provided
   // Id is not included in url but in the body object
   // Requires the following parameters: parentId, key (name) and type
-  async function update(resource, params) {
+  async function update(resource, params, callback) {
     if (!params.id) {
       return 'No id provided';
     }
@@ -113,33 +116,28 @@ function Pimbridge(pimcoreAccess = {}) {
       const thisParam = updates[x];
       resourceObject[thisParam] = params[thisParam];
     }
-    response = await connect('put', pimURL('object'), resourceObject);
 
-    if (response.success) {
-      return response;
-    }
-
-    return response.msg;
+    return connect('put', pimURL('object'), resourceObject, callback);
   }
 
   // Deletes resource based on resource type and id provided
-  function remove(resource, id) {
-    return connect('delete', pimURL(`${resource}/id/${id}`));
+  function remove(resource, id, callback) {
+    return connect('delete', pimURL(`${resource}/id/${id}`), {}, callback);
   }
 
   // Searches resources if provided with an array of ids
   // and returns which ones exist and which don't
   // Condense = returns only not existing objects if 1
-  function exists(resource, idList, condense = 0) {
+  function exists(resource, idList, condense = 0, callback) {
     return connect('get', pimURL(`${resource}-inquire`, {
       extensions: `&ids=${idList}&condense=${condense}`,
-    }));
+    }), {}, callback);
   }
 
   // Searches resources that match a given criteria
   // Default limit of 100
 
-  function search(resource, params = { limit: 100 }, type = 'list') {
+  function search(resource, params = { limit: 100 }, type = 'list', callback) {
     let resourceName;
     if (singularize[resource]) {
       resourceName = singularize[resource];
@@ -161,15 +159,15 @@ function Pimbridge(pimcoreAccess = {}) {
     }
     return connect('get', pimURL(`${resourceName}-${type}`, {
       extensions,
-    }));
+    }), {}, callback);
   }
 
-  function count(resource, params = null) {
-    return search(resource, params, 'count');
+  function count(resource, params = null, callback) {
+    return search(resource, params, 'count', callback);
   }
 
-  function serverTime() {
-    return connect('get', pimURL('system-clock'));
+  function serverTime(callback) {
+    return connect('get', pimURL('system-clock'), {}, callback);
   }
 
   return Object.freeze({

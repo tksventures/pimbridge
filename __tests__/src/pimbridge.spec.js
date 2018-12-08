@@ -20,6 +20,10 @@ function returnData(config, data) {
   }]);
 }
 
+function callbackFunction(pimcoreRes) {
+  return ({ callbackMade: true, response: pimcoreRes });
+}
+
 describe('Pimbridge', () => {
   beforeEach(() => {
     // We set mock env variables for the module
@@ -77,6 +81,12 @@ describe('Pimbridge', () => {
       response = await pimcore.connect('delete', '/test');
       expect(response.msg).toBe('DELETE request was made');
     });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.connect('get', '/test', {}, callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.msg).toBe('GET request was made');
+    });
   });
 
   describe('getUser', () => {
@@ -89,12 +99,24 @@ describe('Pimbridge', () => {
       response = await pimcore.getUser('alternativeKey');
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/user?apikey=alternativeKey');
     });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.getUser('alternativeKey', callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/user?apikey=alternativeKey');
+    });
   });
 
   describe('serverInfo', () => {
     it('should make request to proper Pimcore api endpoint', async () => {
       response = await pimcore.serverInfo();
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/server-info?apikey=fakekey');
+    });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.serverInfo(callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/server-info?apikey=fakekey');
     });
   });
 
@@ -133,6 +155,12 @@ describe('Pimbridge', () => {
       response = await pimcore.get('image', 1456, { light: 1 });
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/image/id/1456?apikey=fakekey&light=1');
     });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.get('image', 1456, { light: 1 }, callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/image/id/1456?apikey=fakekey&light=1');
+    });
   });
 
   describe('create', () => {
@@ -147,6 +175,15 @@ describe('Pimbridge', () => {
       expect(response.request.method).toBe('post');
       expect(requestParams.parentId).toBe(1);
       expect(requestParams.type).toBe('folder');
+    });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.create('object', {
+        parentId: 1,
+        type: 'folder',
+      }, callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object?apikey=fakekey');
     });
   });
 
@@ -176,6 +213,16 @@ describe('Pimbridge', () => {
       expect(response.success).toBe(undefined);
       expect(response).toBe('Nothing to update');
     });
+
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.update('object', {
+        id: 45,
+        type: 'class',
+      }, callbackFunction);
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object?apikey=fakekey');
+    });
   });
 
   describe('remove', () => {
@@ -186,6 +233,13 @@ describe('Pimbridge', () => {
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object/id/45?apikey=fakekey');
       expect(response.request.method).toBe('delete');
     });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.remove('object', 45, callbackFunction);
+
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object/id/45?apikey=fakekey');
+    });
   });
 
   describe('exists', () => {
@@ -195,6 +249,13 @@ describe('Pimbridge', () => {
       expect(response.success).toBe(true);
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-inquire?apikey=fakekey&ids=1256,1257,1258&condense=0');
       expect(response.request.method).toBe('get');
+    });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.exists('object', [1256, 1257, 1258], 0, callbackFunction);
+
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-inquire?apikey=fakekey&ids=1256,1257,1258&condense=0');
     });
   });
 
@@ -209,6 +270,16 @@ describe('Pimbridge', () => {
       expect(response.success).toBe(true);
       expect(response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-list?apikey=fakekey&limit=45&offset=97');
       expect(response.request.method).toBe('get');
+    });
+
+    it('should return callback function response if provided as parameter', async () => {
+      response = await pimcore.search('object', {
+        limit: 45,
+        offset: 97,
+      }, 'list', callbackFunction);
+
+      expect(response.callbackMade).toBe(true);
+      expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-list?apikey=fakekey&limit=45&offset=97');
     });
   });
 });
