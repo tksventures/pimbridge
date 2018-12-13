@@ -1,9 +1,7 @@
-const axios = require('axios');
+const helper = require('./helper');
 
 function Pimbridge(pimcoreAccess = {}) {
   // Pimcore server and apiKey can be set by env variables or as parameters
-  // Generates the url pimcore needs to find resource
-  // Apikey is required in all requests, so this automates it's insertion
 
   // This function converts keywords or versions of resource name into the
   // Pimcore acceptable resource name for its API
@@ -17,6 +15,8 @@ function Pimbridge(pimcoreAccess = {}) {
     tags: 'tag',
   };
 
+  // Generates the url pimcore needs to find resource
+  // Apikey is required in all requests, so this automates it's insertion
   function pimURL(action, data = { apikey: pimcoreAccess.apikey || process.env.PIMCORE_API_KEY }) {
     const pimcoreServer = pimcoreAccess.url || process.env.PIMCORE_URL;
     const pimcoreKey = data.apikey || pimcoreAccess.apikey || process.env.PIMCORE_API_KEY;
@@ -24,49 +24,26 @@ function Pimbridge(pimcoreAccess = {}) {
     return `${pimcoreServer}/webservice/rest/${action}?apikey=${pimcoreKey}${data.extensions || ''}`;
   }
 
-  // We use axios to make the connection to pimcore server
-  function connect(method, url, data, callback) {
-    return axios({
-      url,
-      method,
-      data,
-    })
-      .then((res) => {
-        if (res.data.success) {
-          // If callback exists, it is executed with axios response as a param
-          if (callback) {
-            return callback(res.data);
-          }
-          return res.data;
-        }
-        return ({ error: true, message: res.data.msg });
-      })
-      .catch(error => ({
-        error: true,
-        message: error.response.data.msg,
-        fullError: error.response.data,
-      }));
-  }
-  // =======================================================
+  // ===========================================================
   // BASIC API FUNCTIONS
   // - These are the default web services offered by Pimcore
-  // =======================================================
+  // ===========================================================
 
   // Retrieves info of user with given apiKey
   function getUser(apikey, callback) {
-    return connect('get', pimURL('user', { apikey }), {}, callback);
+    return helper.connect('get', pimURL('user', { apikey }), {}, callback);
   }
 
   // Retrieves server information
   function serverInfo(callback) {
-    return connect('get', pimURL('server-info'), {}, callback);
+    return helper.connect('get', pimURL('server-info'), {}, callback);
   }
 
   // Retrieves a resource based on name and id
   function get(resource, id, params = {}, callback) {
     // If no id is provided, then it gets for the resource directly
     if (!id) {
-      return connect('get', pimURL(`${resource}`), {}, callback);
+      return helper.connect('get', pimURL(`${resource}`), {}, callback);
     }
     let extensions = '';
 
@@ -82,7 +59,7 @@ function Pimbridge(pimcoreAccess = {}) {
       extensions = `&light=${params.light}`;
     }
 
-    return connect('get', pimURL(`${resource}/id/${id}`, {
+    return helper.connect('get', pimURL(`${resource}/id/${id}`, {
       extensions,
     }), {}, callback);
   }
@@ -90,7 +67,7 @@ function Pimbridge(pimcoreAccess = {}) {
   // Creates a resource based on name of it and parameters provided
   // Requires the following parameters: parentId, key (name) and type
   function create(resource, params, callback) {
-    return connect('post', pimURL(resource), params, callback);
+    return helper.connect('post', pimURL(resource), params, callback);
   }
 
   // Updates a resource based on parameters provided
@@ -117,19 +94,19 @@ function Pimbridge(pimcoreAccess = {}) {
       resourceObject[thisParam] = params[thisParam];
     }
 
-    return connect('put', pimURL('object'), resourceObject, callback);
+    return helper.connect('put', pimURL('object'), resourceObject, callback);
   }
 
   // Deletes resource based on resource type and id provided
   function remove(resource, id, callback) {
-    return connect('delete', pimURL(`${resource}/id/${id}`), {}, callback);
+    return helper.connect('delete', pimURL(`${resource}/id/${id}`), {}, callback);
   }
 
   // Searches resources if provided with an array of ids
   // and returns which ones exist and which don't
   // Condense = returns only not existing objects if 1
   function exists(resource, idList, condense = 0, callback) {
-    return connect('get', pimURL(`${resource}-inquire`, {
+    return helper.connect('get', pimURL(`${resource}-inquire`, {
       extensions: `&ids=${idList}&condense=${condense}`,
     }), {}, callback);
   }
@@ -156,7 +133,7 @@ function Pimbridge(pimcoreAccess = {}) {
         }
       }
     }
-    return connect('get', pimURL(`${resourceName}-${type}`, {
+    return helper.connect('get', pimURL(`${resourceName}-${type}`, {
       extensions,
     }), {}, callback);
   }
@@ -168,11 +145,108 @@ function Pimbridge(pimcoreAccess = {}) {
 
   // Returns server time
   function serverTime(callback) {
-    return connect('get', pimURL('system-clock'), {}, callback);
+    return helper.connect('get', pimURL('system-clock'), {}, callback);
+  }
+
+
+  // ===========================================================
+  // ENHANCEMENTS
+  // - This are Pimcore methods not offered in the default API
+  // ===========================================================
+
+  // This makes a shallow copy of a single resource of Pimcore
+  async function shallowCopy(resource, params) {
+    if (!params.id || !params.parentId) {
+      return { error: true, message: 'Missing id or parentId' };
+    }
+    const response = await get(resource, params.id);
+
+    if (!response.success) {
+      return response;
+    }
+
+    const original = response.data;
+    const copiedObject = JSON.parse(JSON.stringify(response.data));
+    delete copiedObject.id;
+    delete copiedObject.path;
+
+    copiedObject.parentId = params.parentId;
+
+    if (params.childs) {
+      copiedObject.childs = params.childs;
+    }
+
+    if (params.key) {
+      copiedObject.key = params.key;
+    }
+
+    // If parameter of preview or addChildren is given,
+    // then we don't create a new folder with previous data
+    // but instead return state of resource with changes
+    if (params.preview || params.addChildren) {
+      return { original, copy: copiedObject, success: true };
+    }
+
+    const copyResponse = await create(resource, copiedObject);
+
+    if (!copyResponse.success) {
+      copyResponse.original = original;
+      return copyResponse;
+    }
+
+    return { original, success: true, id: copyResponse.id };
+  }
+
+  // This method can copy a resource with its direct children if the
+  // parameter children is included
+  // It can also attach direct children of a resource if the
+  // parameter addChildren is provided
+  async function copy(resource, params, callback) {
+    let parentId;
+    // We default our parentId to the one given in params
+    ({ parentId } = params);
+
+    // We will make a copy of the resource first (if not in preview or addChildren mode)
+    const parentCopy = (await shallowCopy(resource, params));
+
+    // If the resource failed to be copied or has no children, then we are done
+    if (!parentCopy.success || (!params.children && !params.addChildren)) {
+      if (parentCopy.success && callback) {
+        return callback(parentCopy);
+      }
+      return parentCopy;
+    }
+
+    // If we are addChildren is not set but children is, then we reassign the parentId
+    if (!params.addChildren) {
+      parentId = parentCopy.id;
+    }
+
+    // We take the children from the data retrieved from copy method
+    const { childs } = parentCopy.original;
+
+    // We will need to execute this method inside each child
+    async function copyChild(child) {
+      const childParams = {
+        parentId,
+        id: child.id,
+      };
+      return shallowCopy(resource, childParams);
+    }
+
+    // We use our helper to loop in the child list and execute the above method
+    const childResponses = await helper.loopAndExec(childs, copyChild);
+    childResponses.id = parentId; // We include id of parent copy
+
+    // We return our response. It will contain and object with error and success keys telling us
+    // if any child was not copied
+    if (callback) {
+      return callback(childResponses);
+    }
+    return childResponses;
   }
 
   return Object.freeze({
-    connect,
     pimURL,
     get,
     create,
@@ -184,6 +258,8 @@ function Pimbridge(pimcoreAccess = {}) {
     getUser,
     serverInfo,
     serverTime,
+    shallowCopy,
+    copy,
   });
 }
 
