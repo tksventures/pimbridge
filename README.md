@@ -150,5 +150,6 @@ object => {
   id: idOfParentFolder', // Where children were copied to
 }
 */
+```
 
 Copy tool. It copies a resource into a new parent as per parameters given. Can copy direct children if provided with a children or addChildren parameter. The first parameter will copy the base folder and its direct children into the new parentFolder. The second parameter will indicate that only children are to be copied.

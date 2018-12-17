@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const helper = require('./helper');
 
 function Pimbridge(pimcoreAccess = {}) {
@@ -151,7 +152,7 @@ function Pimbridge(pimcoreAccess = {}) {
 
   // ===========================================================
   // ENHANCEMENTS
-  // - This are Pimcore methods not offered in the default API
+  // - These are Pimcore methods not offered in the default API
   // ===========================================================
 
   // This makes a shallow copy of a single resource of Pimcore
@@ -166,7 +167,7 @@ function Pimbridge(pimcoreAccess = {}) {
     }
 
     const original = response.data;
-    const copiedObject = JSON.parse(JSON.stringify(response.data));
+    const copiedObject = _.clone(response.data);
     delete copiedObject.id;
     delete copiedObject.path;
 

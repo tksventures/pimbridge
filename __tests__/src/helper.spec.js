@@ -19,7 +19,7 @@ function callbackFunction(pimcoreRes) {
   return ({ callbackMade: true, response: pimcoreRes });
 }
 
-describe('Helper', () => {
+describe('helper', () => {
   beforeEach(() => {
     // We set mock env variables for the module
     mock = new MockAdapter(axios);

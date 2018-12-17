@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-function Helper() {
+function helper() {
   // We use axios to make the connection to pimcore server
   function connect(method, url, data, callback) {
     return axios({
@@ -31,14 +31,23 @@ function Helper() {
       errors: [],
     };
 
+    const rawResponses = [];
+
     for (let x = 0; x < listing.length; x += 1) {
       const thisElement = listing[x];
-      // eslint-disable-next-line no-await-in-loop
-      const thisResponse = await func(thisElement);
-      if (thisResponse.success) {
-        responses.success.push(thisResponse);
+      const thisResponse = func(thisElement);
+      rawResponses.push(thisResponse);
+    }
+
+    const data = await Promise.all(rawResponses);
+
+    for (let x = 0; x < data.length; x += 1) {
+      const thisElement = data[x];
+
+      if (thisElement.success) {
+        responses.success.push(thisElement);
       } else {
-        responses.errors.push(thisResponse);
+        responses.errors.push(thisElement);
       }
     }
 
@@ -54,4 +63,4 @@ function Helper() {
   });
 }
 
-module.exports = Helper();
+module.exports = helper();
