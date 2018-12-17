@@ -1,6 +1,6 @@
 {
   "name": "pimbridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,8 @@
   "dependencies": {
     "axios": "^0.16.2",
     "body-parser": "^1.18.2",
-    "debug": "^3.1.0"
+    "debug": "^3.1.0",
+    "lodash": "^4.17.11"
   },
   "devDependencies": {
     "axios-mock-adapter": "^1.15.0",

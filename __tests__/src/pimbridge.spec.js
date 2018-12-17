@@ -8,21 +8,45 @@ let response;
 
 let callCounter = 0;
 
-function returnData(config, data = { id: 'something', type: 'folder' }) {
+function returnData(config, data = { id: 'something', type: 'folder' }, directReturn = false) {
   const rType = config.method.toUpperCase();
+  let returnObject;
+
+  if (directReturn) {
+    returnObject = data;
+  } else {
+    returnObject = {
+      data,
+      request: config,
+      success: true,
+      msg: `${rType} request was made`,
+    };
+  }
   callCounter += 1;
 
-  return ([200, {
-    data,
-    request: config,
-    success: true,
-    msg: `${rType} request was made`,
-  }]);
+  return ([200, returnObject]);
 }
 
 function callbackFunction(pimcoreRes) {
   return ({ callbackMade: true, response: pimcoreRes });
 }
+
+const copyReturnData = {
+  path: '/products/categories/',
+  childs: [{
+    id: 97,
+    type: 'object',
+  }, {
+    id: 69,
+    type: 'object',
+  }],
+  elements: [],
+  className: 'ProductCategory',
+  id: 45,
+  parentId: 987,
+  key: 'products',
+  type: 'object',
+};
 
 describe('Pimbridge', () => {
   beforeEach(() => {
@@ -64,28 +88,6 @@ describe('Pimbridge', () => {
 
       response = pimcore.pimURL('object/id/1281', { apikey: 'alternateApiKey2' });
       expect(response).toBe('https://fake-pimcore.org/webservice/rest/object/id/1281?apikey=alternateApiKey2');
-    });
-  });
-
-  describe('connect', () => {
-    it('should return make call to axios based on method, url and data given', async () => {
-      response = await pimcore.connect('get', '/test');
-      expect(response.msg).toBe('GET request was made');
-
-      response = await pimcore.connect('post', '/test');
-      expect(response.msg).toBe('POST request was made');
-
-      response = await pimcore.connect('put', '/test');
-      expect(response.msg).toBe('PUT request was made');
-
-      response = await pimcore.connect('delete', '/test');
-      expect(response.msg).toBe('DELETE request was made');
-    });
-
-    it('should return callback function response if provided as parameter', async () => {
-      response = await pimcore.connect('get', '/test', {}, callbackFunction);
-      expect(response.callbackMade).toBe(true);
-      expect(response.response.msg).toBe('GET request was made');
     });
   });
 
@@ -280,6 +282,149 @@ describe('Pimbridge', () => {
 
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-list?apikey=fakekey&limit=45&offset=97');
+    });
+  });
+
+
+  describe('shallowCopy', () => {
+    beforeEach(() => {
+      mock.onGet().reply(config => returnData(config, copyReturnData));
+
+      mock.onPost().reply(config => returnData(config, {
+        success: true,
+        id: 123456,
+      }, true));
+    });
+
+    it('should return id of new object created along with copy of original item', async () => {
+      response = await pimcore.shallowCopy('object', {
+        id: 45,
+        parentId: 1068,
+      });
+
+      expect(response.success).toBe(true);
+      expect(response.id).toBe(123456);
+      expect(response.original.id).toBe(45);
+      expect(response.original.parentId).toBe(987);
+      expect(response.original.childs.length).toBe(2);
+    });
+
+    it('should return copy if preview or addChildre param is provided', async () => {
+      response = await pimcore.shallowCopy('object', {
+        id: 45,
+        parentId: 1068,
+        preview: true,
+      });
+
+      expect(response.success).toBe(true);
+      expect(response.copy.id).toBe(undefined);
+      expect(response.copy.parentId).toBe(1068);
+      expect(response.copy.childs.length).toBe(2);
+
+      response = await pimcore.shallowCopy('object', {
+        id: 45,
+        parentId: 1068,
+        preview: true,
+      });
+    });
+
+
+    it('should return error if not provided with id or parentId param', async () => {
+      response = await pimcore.shallowCopy('object', {
+        id: 45,
+      });
+
+      expect(response.error).toBe(true);
+
+      response = await pimcore.shallowCopy('object', {
+        parentId: 45,
+      });
+
+      expect(response.error).toBe(true);
+    });
+  });
+
+  describe('copy', () => {
+    beforeEach(() => {
+      mock.onGet().reply(config => returnData(config, copyReturnData));
+
+      mock.onPost().reply(config => returnData(config, {
+        success: true,
+        id: 123456,
+      }, true));
+    });
+
+    it('should call return success/error keys if called and correct parentId', async () => {
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+      });
+
+      expect(response.success).toBe(true);
+      expect(response.id).toBe(123456);
+      expect(response.original.id).toBe(45);
+
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+        children: true,
+      });
+
+      expect(response.success_total).toBe(2);
+      expect(response.errors_total).toBe(0);
+      expect(response.id).toBe(123456); // Should be generated id
+
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+        addChildren: true,
+      });
+
+      expect(response.success_total).toBe(2);
+      expect(response.errors_total).toBe(0);
+      expect(response.id).toBe(1068); // Should be id in param given
+    });
+
+    it('should return callback function result if callback provided', async () => {
+      function callFunc(resp) {
+        const returnValue = resp;
+        returnValue.id = resp.id * 2;
+
+        return returnValue;
+      }
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+      }, callFunc);
+      expect(response.id).toBe(246912);
+
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+        children: true,
+      }, callFunc);
+      expect(response.id).toBe(246912); // Should be generated id
+
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+        addChildren: true,
+      }, callFunc);
+      expect(response.id).toBe(2136); // Should be id in param given
+    });
+
+    it('should return error if not provided with id or parentId param', async () => {
+      response = await pimcore.copy('object', {
+        id: 45,
+      });
+
+      expect(response.error).toBe(true);
+
+      response = await pimcore.copy('object', {
+        parentId: 45,
+      });
+
+      expect(response.error).toBe(true);
     });
   });
 });
