@@ -15,6 +15,17 @@ function returnData(config, data = { id: 'something', type: 'folder' }) {
   }]);
 }
 
+function returnError(config, errorObject) {
+  if (!errorObject) {
+    return ([500, {
+      config,
+      code: 'ECONNREFUSED',
+    }]);
+  }
+
+  return errorObject;
+}
+
 function callbackFunction(pimcoreRes) {
   return ({ callbackMade: true, response: pimcoreRes });
 }
@@ -25,6 +36,50 @@ describe('helper', () => {
     mock = new MockAdapter(axios);
 
     mock.onAny().reply(config => returnData(config));
+  });
+
+  describe('handleError', () => {
+    beforeEach(() => {
+      mock = new MockAdapter(axios);
+      mock.onGet('/system_error').networkError();
+      mock.onGet('/axios_request').reply(config => returnError(config));
+    });
+
+    it('should return error key of true, full error and default message if not provided with one', async () => {
+      try {
+        response = await axios.get('/system_error');
+      } catch (e) {
+        response = helper.handleError(e); // With all default values
+      }
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe('There was an error'); // Default message
+    });
+
+    it('should return custom message if one is provided', async () => {
+      try {
+        response = await axios.get('/system_error');
+      } catch (e) {
+        response = helper.handleError(e, 'Axios connection error');
+      }
+
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Axios connection error'); // Default message
+    });
+
+    it('should return message with error code if is an axios request and code is available', async () => {
+      try {
+        response = await axios.get('/axios_request');
+      } catch (e) {
+        response = helper.handleError(e, 'Axios connection error', 'axios-error');
+      }
+
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Request failed with status code 500');
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.fullError.code).toBe('ECONNREFUSED');
+    });
   });
 
   describe('connect', () => {
@@ -46,6 +101,27 @@ describe('helper', () => {
       response = await helper.connect('get', '/test', {}, callbackFunction);
       expect(response.callbackMade).toBe(true);
       expect(response.response.msg).toBe('GET request was made');
+    });
+
+    it('should return error if connection is unsuccessful', async () => {
+      mock = new MockAdapter(axios);
+      mock.onAny('/failed').reply(config => returnError(config));
+
+      response = await helper.connect('get', '/failed');
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Request failed with status code 500');
+
+      response = await helper.connect('post', '/failed', {}, callbackFunction);
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Request failed with status code 500');
+
+      response = await helper.connect('put', '/failed', {}, callbackFunction);
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Request failed with status code 500');
+
+      response = await helper.connect('delete', '/failed', {}, callbackFunction);
+      expect(response.error).toBe(true);
+      expect(response.message).toBe('Request failed with status code 500');
     });
   });
 
