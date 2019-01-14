@@ -1,6 +1,26 @@
 const axios = require('axios');
+const _ = require('lodash');
 
 function helper() {
+  // We use this function to properly handle errors from axios and error responses from Pimcore
+  function handleError(
+    error,
+    defaultMessage = 'There was an error',
+    errorMessagePath = 'response.data.msg',
+  ) {
+    let message;
+    const fullError = _.get(error, 'response.data', error);
+
+    message = _.get(error, errorMessagePath, defaultMessage);
+
+    // If we are dealing with an axios error, we return its error message if provided
+    if (errorMessagePath === 'axios-error' && error.message) {
+      ({ message } = error);
+    }
+
+    return ({ message, fullError, error: true });
+  }
+
   // We use axios to make the connection to pimcore server
   function connect(method, url, data, callback) {
     return axios({
@@ -16,13 +36,10 @@ function helper() {
           }
           return res.data;
         }
-        return ({ error: true, message: res.data.msg });
+
+        return handleError(res, 'Request error');
       })
-      .catch(error => ({
-        error: true,
-        message: error.response.data.msg,
-        fullError: error.response.data,
-      }));
+      .catch(error => (handleError(error, 'Connection error', 'axios-error')));
   }
 
   async function loopAndExec(listing, func) {
@@ -57,9 +74,11 @@ function helper() {
     return responses;
   }
 
+
   return Object.freeze({
     connect,
     loopAndExec,
+    handleError,
   });
 }
 

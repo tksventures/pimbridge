@@ -1,10 +1,12 @@
 {
   "name": "pimbridge",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --verbose --silent"
+    "test": "jest --verbose --silent",
+    "lint": "./node_modules/.bin/eslint --ext .js ./",
+    "full-test": "npm run lint && npm run test"
   },
   "jest": {
     "testURL": "http://localhost/"

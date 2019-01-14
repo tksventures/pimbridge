@@ -81,7 +81,13 @@ function Pimbridge(pimcoreAccess = {}) {
 
     // All infor of object needs to be provided in update,
     // so we'll retrieve all customer data prior to applying changes
-    const resourceObject = (await get(resource, params.id)).data;
+    const resourceQuery = await get(resource, params.id);
+
+    if (resourceQuery.error) {
+      return resourceQuery;
+    }
+
+    const resourceObject = resourceQuery.data;
     const updates = Object.keys(params);
 
     // There's nothing to do if id is the only param

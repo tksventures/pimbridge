@@ -8,6 +8,19 @@ let response;
 
 let callCounter = 0;
 
+const defaultErrorMessage = 'Request failed with status code 500';
+
+function returnError(config, errorObject) {
+  if (!errorObject) {
+    return ([500, {
+      config,
+      code: 'ECONNREFUSED',
+    }]);
+  }
+
+  return errorObject;
+}
+
 function returnData(config, data = { id: 'something', type: 'folder' }, directReturn = false) {
   const rType = config.method.toUpperCase();
   let returnObject;
@@ -30,6 +43,12 @@ function returnData(config, data = { id: 'something', type: 'folder' }, directRe
 function callbackFunction(pimcoreRes) {
   return ({ callbackMade: true, response: pimcoreRes });
 }
+
+function mockErrors() {
+  mock = new MockAdapter(axios);
+  mock.onAny().reply(config => returnError(config));
+}
+
 
 const copyReturnData = {
   path: '/products/categories/',
@@ -107,6 +126,15 @@ describe('Pimbridge', () => {
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/user?apikey=alternativeKey');
     });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.getUser();
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
+    });
   });
 
   describe('serverInfo', () => {
@@ -119,6 +147,15 @@ describe('Pimbridge', () => {
       response = await pimcore.serverInfo(callbackFunction);
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/server-info?apikey=fakekey');
+    });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.serverInfo();
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 
@@ -163,6 +200,15 @@ describe('Pimbridge', () => {
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/asset/id/1456?apikey=fakekey&light=1');
     });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.get('object', 1456, { light: 1 });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
+    });
   });
 
   describe('create', () => {
@@ -186,6 +232,18 @@ describe('Pimbridge', () => {
       }, callbackFunction);
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object?apikey=fakekey');
+    });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.create('object', {
+        parentId: 1,
+        type: 'folder',
+      });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 
@@ -225,6 +283,18 @@ describe('Pimbridge', () => {
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object?apikey=fakekey');
     });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.update('object', {
+        id: 45,
+        type: 'class',
+      });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
+    });
   });
 
   describe('remove', () => {
@@ -242,6 +312,15 @@ describe('Pimbridge', () => {
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object/id/45?apikey=fakekey');
     });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.remove('object', 45);
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
+    });
   });
 
   describe('exists', () => {
@@ -258,6 +337,15 @@ describe('Pimbridge', () => {
 
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-inquire?apikey=fakekey&ids=1256,1257,1258&condense=0');
+    });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.exists('object', [1256, 1257, 1258]);
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 
@@ -282,6 +370,18 @@ describe('Pimbridge', () => {
 
       expect(response.callbackMade).toBe(true);
       expect(response.response.request.url).toBe('https://fake-pimcore.org/webservice/rest/object-list?apikey=fakekey&limit=45&offset=97');
+    });
+
+    it('should gracefully return error if one is encountered', async () => {
+      mockErrors();
+      response = await pimcore.search('object', {
+        limit: 45,
+        offset: 97,
+      });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 
@@ -341,6 +441,18 @@ describe('Pimbridge', () => {
       });
 
       expect(response.error).toBe(true);
+    });
+
+    it('should gracefully return error if one is encountered otherwise', async () => {
+      mockErrors();
+      response = await pimcore.shallowCopy('object', {
+        id: 45,
+        parentId: 1068,
+      });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 
@@ -425,6 +537,19 @@ describe('Pimbridge', () => {
       });
 
       expect(response.error).toBe(true);
+    });
+
+    it('should gracefully return error if one is encountered otherwise', async () => {
+      mockErrors();
+      response = await pimcore.copy('object', {
+        id: 45,
+        parentId: 1068,
+        children: true,
+      });
+
+      expect(response.error).toBe(true);
+      expect(response.fullError).not.toBe(undefined);
+      expect(response.message).toBe(defaultErrorMessage);
     });
   });
 });
